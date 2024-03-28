@@ -157,11 +157,11 @@ int main() {
   printf("CE229112 - Connectivity Example: TCP Client\n");
   printf("============================================================\n\n");
 
-  void http_task(void *arg);
+  void smi_main(void *arg);
 
 #if defined(COMPONENT_FREERTOS)
   /* Create the tasks. */
-  xTaskCreate(http_task, "Network task", TCP_CLIENT_TASK_STACK_SIZE, NULL,
+  xTaskCreate(smi_main, "SMI task", TCP_CLIENT_TASK_STACK_SIZE, NULL,
               TCP_CLIENT_TASK_PRIORITY, NULL);
 
   /* Start the FreeRTOS scheduler. */

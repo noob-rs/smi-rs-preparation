@@ -127,10 +127,8 @@ void http_task_connect() {
   }
 }
 
-void http_task(void *arg) {
+void _smi_main(void *arg) {
   mfrc();
-  return;
-
   http_task_init();
   http_task_connect();
 
