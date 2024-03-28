@@ -127,7 +127,7 @@ void http_task_connect() {
   }
 }
 
-void _smi_main(void *arg) {
+__attribute__((weak)) void smi_main(void *arg) {
   mfrc();
   http_task_init();
   http_task_connect();
