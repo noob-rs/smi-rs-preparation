@@ -297,6 +297,7 @@ typedef struct {
 typedef struct {
   cyhal_spi_t m_SPI;
   cyhal_gpio_t m_reset;
+  cyhal_gpio_t m_cs;
   Uid uid;
 } mfrc522_t;
 

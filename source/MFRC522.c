@@ -9,6 +9,7 @@
 #include "MFRC522.h"
 #include "cy_result.h"
 #include "cyhal.h"
+#include "cyhal_gpio.h"
 #include "cyhal_spi.h"
 
 static const char *const _TypeNamePICC[] = {
@@ -53,7 +54,8 @@ void MFRC522_Init(mfrc522_t *mfrc, cyhal_gpio_t mosi, cyhal_gpio_t miso,
                   cyhal_gpio_t sclk, cyhal_gpio_t cs, cyhal_gpio_t reset) {
 
   /* Configure SPI bus */
-  cy_rslt_t result = cyhal_spi_init(&mfrc->m_SPI, mosi, miso, sclk, cs, NULL, 8,
+  mfrc->m_cs = cs;
+  cy_rslt_t result = cyhal_spi_init(&mfrc->m_SPI, mosi, miso, sclk, NC, NULL, 8,
                                     CYHAL_SPI_MODE_00_MSB, false);
   CY_ASSERT(result == 0);
   result = cyhal_spi_set_frequency(&mfrc->m_SPI, 8000000);
@@ -62,6 +64,10 @@ void MFRC522_Init(mfrc522_t *mfrc, cyhal_gpio_t mosi, cyhal_gpio_t miso,
   mfrc->m_reset = reset;
   result = cyhal_gpio_init(mfrc->m_reset, CYHAL_GPIO_DIR_OUTPUT,
                            CYHAL_GPIO_DRIVE_STRONG, 0);
+  CY_ASSERT(result == 0);
+
+  result = cyhal_gpio_init(mfrc->m_cs, CYHAL_GPIO_DIR_OUTPUT,
+                           CYHAL_GPIO_DRIVE_PULLUP, 1);
   CY_ASSERT(result == 0);
 
   /* Release RESET pin */
@@ -77,10 +83,12 @@ void MFRC522_Init(mfrc522_t *mfrc, cyhal_gpio_t mosi, cyhal_gpio_t miso,
  * The interface is described in the datasheet section 8.1.2.
  */
 void PCD_WriteRegister(mfrc522_t *mfrc, uint8_t reg, uint8_t value) {
+  cyhal_gpio_write(mfrc->m_cs, 0);
   // MSB == 0 is for writing. LSB is not used in address. Datasheet
   // section 8.1.2.3.
   (void)cyhal_spi_send(&mfrc->m_SPI, reg & 0x7E);
   (void)cyhal_spi_send(&mfrc->m_SPI, value);
+  cyhal_gpio_write(mfrc->m_cs, 1);
 } // End PCD_WriteRegister()
 
 /**
@@ -90,12 +98,14 @@ void PCD_WriteRegister(mfrc522_t *mfrc, uint8_t reg, uint8_t value) {
 void PCD_WriteRegisterBytes(mfrc522_t *mfrc, uint8_t reg, uint8_t count,
                             uint8_t *values) {
 
+  cyhal_gpio_write(mfrc->m_cs, 0);
   // MSB == 0 is for writing. LSB is not used in address. Datasheet
   // section 8.1.2.3.
   (void)cyhal_spi_send(&mfrc->m_SPI, reg & 0x7E);
   for (uint8_t index = 0; index < count; index++) {
     (void)cyhal_spi_send(&mfrc->m_SPI, values[index]);
   }
+  cyhal_gpio_write(mfrc->m_cs, 1);
 
 } // End PCD_WriteRegister()
 
@@ -104,14 +114,15 @@ void PCD_WriteRegisterBytes(mfrc522_t *mfrc, uint8_t reg, uint8_t count,
  * The interface is described in the datasheet section 8.1.2.
  */
 uint8_t PCD_ReadRegister(mfrc522_t *mfrc, uint8_t reg) {
-  uint8_t value;
+  cyhal_gpio_write(mfrc->m_cs, 0);
 
   // MSB == 1 is for reading. LSB is not used in address. Datasheet
   // section 8.1.2.3.
-  (void)cyhal_spi_send(&mfrc->m_SPI, 0x80 | reg);
-
   // Read the value back. Send 0 to stop reading.
-  value = cyhal_spi_read_byte(&mfrc->m_SPI, 0);
+  (void)cyhal_spi_send(&mfrc->m_SPI, 0x80 | reg);
+  uint8_t value = cyhal_spi_read_byte(&mfrc->m_SPI, 0);
+
+  cyhal_gpio_write(mfrc->m_cs, 1);
 
   return value;
 } // End PCD_ReadRegister()
@@ -125,6 +136,8 @@ void PCD_ReadRegisterBytes(mfrc522_t *mfrc, uint8_t reg, uint8_t count,
   if (count == 0) {
     return;
   }
+
+  cyhal_gpio_write(mfrc->m_cs, 0);
 
   uint8_t address = 0x80 | reg; // MSB == 1 is for reading. LSB is not used in
                                 // address. Datasheet section 8.1.2.3.
@@ -160,6 +173,8 @@ void PCD_ReadRegisterBytes(mfrc522_t *mfrc, uint8_t reg, uint8_t count,
 
   values[index] = cyhal_spi_read_byte(
       &mfrc->m_SPI, 0); // Read the final byte. Send 0 to stop reading.
+
+  cyhal_gpio_write(mfrc->m_cs, 1);
 
 } // End PCD_ReadRegister()
 
