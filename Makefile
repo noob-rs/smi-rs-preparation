@@ -145,7 +145,7 @@ VFP_SELECT=
 #
 # NOTE: Includes and defines should use the INCLUDES and DEFINES variable
 # above.
-CFLAGS=-ULWIP_IPV6
+CFLAGS=-ULWIP_IPV6 -fno-short-enums
 
 # Additional / custom C++ compiler flags.
 #

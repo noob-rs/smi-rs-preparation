@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 
 # Delete old library if exists
-rm libsmi.a
+rm -f libsmi.a
 
 # Compile
 make build -j
